@@ -1,2 +1,2 @@
 # Super-Resolution
-Undergraduate thesis on super resolution on medical image
+Undergraduate thesis on super resolution of medical images
