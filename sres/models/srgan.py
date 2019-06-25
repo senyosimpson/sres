@@ -3,6 +3,8 @@ import torch.nn as nn
 import numpy as np
 from .submodules import *
 
+MODEL_NAME = 'SRGAN'
+
 class Generator(nn.Module):
     def __init__(self):
         super().__init__()
@@ -33,7 +35,7 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, image_shape):
+    def __init__(self, input_shape):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         strides = [2, 1, 2, 1, 2, 1, 2]
