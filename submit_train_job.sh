@@ -1,7 +1,7 @@
 gradient jobs create \
 --name "$0" \
 --container "docker.io/senyo/sres:latest" \
---registryUsername ${DOCKERHUB_USRENAME} \
+--registryUsername ${DOCKERHUB_USERNAME} \
 --registryPassword ${DOCKERHUB_PASSWORD} \
 --machineType "P5000" \
 --command "sh train.sh"
