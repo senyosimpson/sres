@@ -8,7 +8,7 @@ class AdversarialLoss(nn.Module):
         super().__init__()
 
     def forward(self, probabiliites):
-        loss = (-torch.log(probabiliites)).sum()
+        loss = -torch.log(probabiliites).sum()
         return loss
 
 
