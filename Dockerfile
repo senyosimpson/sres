@@ -1,4 +1,4 @@
-FROM python:3.6-alpine
+FROM ubuntu
 ENV PYTHONBUFFERED 1
 
 COPY . /
