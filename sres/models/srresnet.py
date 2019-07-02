@@ -2,9 +2,11 @@ import torch
 import torch.nn as nn 
 from .submodules import *
 
+
 class SRResNet(nn.Module):
     def __init__(self):
         super().__init__()
+        self.name = 'SRResNet'
         self.conv1 = nn.Conv2d(3, 64, kernel_size=9, stride=1, padding=4, bias=False)
         self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.conv3 = nn.Conv2d(64, 3, kernel_size=9, stride=1, padding=4, bias=False)
