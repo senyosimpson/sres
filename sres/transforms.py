@@ -2,13 +2,14 @@
 import torch
 from torchvision import transforms
 import torchvision.transforms.functional as TF
+from PIL import Image
 import random
 
 
 class ToTensor:
     def __call__(self, sample):
         lres_img, hres_img = sample
-        sample = (torch.Tensor(lres_img), torch.Tensor(hres_img))
+        sample = (TF.to_tensor(lres_img), TF.to_tensor(hres_img))
         return sample
 
 
@@ -60,10 +61,10 @@ class RandomRotateNinety:
         lres_img, hres_img = sample
         if random.random() > self.p:
             degrees = random.choice([90, 270])
-            lres_img_rotated = TF.rotate(lres_img, degrees, resample='PIL.Image.BICUBIC')
-            hres_img_rotated = TF.rotate(hres_img, degrees, resample='PIL.Image.BICUBIC')
+            lres_img = TF.rotate(lres_img, degrees, resample=Image.BICUBIC)
+            hres_img = TF.rotate(hres_img, degrees, resample=Image.BICUBIC)
         
-        sample = (lres_img_rotated, hres_img_rotated)
+        sample = (lres_img, hres_img)
         return sample
 
 
@@ -74,8 +75,8 @@ class RandomHorizontalFlip:
     def __call__(self, sample):
         lres_img, hres_img = sample
         if random.random() > self.p:
-            lres_img_flipped = TF.hflip(lres_img)
-            hres_img_flipped = TF.hflip(hres_img)
+            lres_img = TF.hflip(lres_img)
+            hres_img = TF.hflip(hres_img)
         
-        sample = (lres_img_flipped, hres_img_flipped)
+        sample = (lres_img, hres_img)
         return sample
