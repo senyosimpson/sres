@@ -4,4 +4,4 @@ gradient jobs create \
 --registryUsername ${DOCKERHUB_USERNAME} \
 --registryPassword ${DOCKERHUB_PASSWORD} \
 --machineType "P5000" \
---command "sh train.sh"
+--command "./train.sh"
