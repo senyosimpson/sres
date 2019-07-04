@@ -73,7 +73,7 @@ class SubPixelConv2d(nn.Module):
         super().__init__()
         self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, padding=1, bias=False)
         self.pixel_shuffle = nn.PixelShuffle(upscale_factor)
-        self.prelu = nn.PReLU
+        self.prelu = nn.PReLU()
 
     def forward(self, x):
         x = self.conv(x)
