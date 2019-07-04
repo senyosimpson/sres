@@ -20,8 +20,8 @@ class SRResNet(nn.Module):
 
     def forward(self, x):
         input_layer = self.prelu(self.conv1(x))
-        x = self.residual(x)
-        x - self.bn(self.conv2(x))
+        x = self.residual(input_layer)
+        x = self.bn(self.conv2(x))
         x = torch.add(x, input_layer)
         x = self.sub_pixel_conv1(x)
         x = self.sub_pixel_conv2(x)
