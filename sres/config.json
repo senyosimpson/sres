@@ -1,0 +1,21 @@
+{
+    "model": "srresnet",
+    "solver": "std",
+    "epochs": 10,
+    "loss_fn": "MSE",
+    "dataset": {
+        "name": "div2k",
+        "params": {
+            "batch_size": 16,
+            "num_workers": 2,
+            "shuffle": true
+        }
+    },
+    "optimizer": {
+        "name": "adam",
+        "params": {
+            "lr" : 1e-4,
+            "betas": [0.9, 0.99]
+        }
+    }
+}
