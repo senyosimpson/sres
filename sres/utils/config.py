@@ -21,6 +21,14 @@ class Config:
         self.optimizer_name = opt['name']
         self.optimizer_parms = opt['params']
 
+        if 'scheduler' in conf:
+            sched = conf['scheduler']
+            self.scheduler_name = sched['name']
+            self.scheduler_params = sched['params']
+        else:
+            self.scheduler_name = None
+            self.schedular_params = None
+
         if 'checkpoint' in conf:
             self.checkpoint = conf['checkpoint']
         else:
