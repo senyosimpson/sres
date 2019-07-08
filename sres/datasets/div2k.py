@@ -4,14 +4,18 @@ import torch
 from torch.utils.data import Dataset
 from glob import glob
 
-DIR_NAMES = ['DIV2K_train_LR_bicubic_X4', 'DIV2K_train_HR']
+TRAIN_DIR_NAMES = ['DIV2K_train_LR_bicubic_X4', 'DIV2K_train_HR'] 
+VALID_DIR_NAMES = ['DIV2K_valid_LR_bicubic_X4', 'DIV2K_valid_HR', ]
 
 
 class Div2K(Dataset):
-    def __init__(self, root, fmat='png', transform=None):
+    def __init__(self, root, training=True, fmat='png', transform=None):
         ext = '*.%s' % fmat
-        self.lres_images = sorted(glob(os.path.join(root, DIR_NAMES[0], ext)))
-        self.hres_images = sorted(glob(os.path.join(root, DIR_NAMES[1], ext)))
+        lr_dir, hr_dir = TRAIN_DIR_NAMES
+        if not training:
+            lr_dir, hr_dir = VALID_DIR_NAMES
+        self.lres_images = sorted(glob(os.path.join(root, lr_dir, ext)))
+        self.hres_images = sorted(glob(os.path.join(root, hr_dir, ext)))
         self.dataset = list(zip(self.lres_images, self.hres_images))
         self.transform = transform
 
