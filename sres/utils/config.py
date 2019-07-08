@@ -9,7 +9,7 @@ class Config:
         with open(path, mode='r') as f:
             conf = json.load(f)
         
-        self.model_name = conf['model']
+        self.model = conf['model']
         self.epochs = conf['epochs']
         self.loss_fn = conf['loss_fn']
         
@@ -25,3 +25,6 @@ class Config:
             self.checkpoint = conf['checkpoint']
         else:
             self.checkpoint = None
+
+    def __getitem__(self, key):
+        return getattr(self, key)
