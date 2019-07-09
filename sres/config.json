@@ -2,7 +2,7 @@
     "model": "srresnet",
     "solver": "std",
     "epochs": 10,
-    "loss_fn": "MSE",
+    "loss_fn": "mse",
     "dataset": {
         "name": "div2k",
         "params": {
