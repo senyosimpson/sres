@@ -12,6 +12,7 @@ class Config:
         self.model = conf['model']
         self.epochs = conf['epochs']
         self.loss_fn = conf['loss_fn']
+        self.solver = conf['solver']
         
         ds = conf['dataset']
         self.dataset_name = ds['name']
@@ -19,7 +20,7 @@ class Config:
 
         opt = conf['optimizer']
         self.optimizer_name = opt['name']
-        self.optimizer_parms = opt['params']
+        self.optimizer_params = opt['params']
 
         if 'scheduler' in conf:
             sched = conf['scheduler']
@@ -27,7 +28,7 @@ class Config:
             self.scheduler_params = sched['params']
         else:
             self.scheduler_name = None
-            self.schedular_params = None
+            self.scheduler_params = None
 
         if 'checkpoint' in conf:
             self.checkpoint = conf['checkpoint']
