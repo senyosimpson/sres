@@ -43,9 +43,13 @@ model - srresnet, srgan, esrgan
 solver - std, gan
 dataset - div2k, flickr2k, df2k
 optimizer - adam
-losses - mse
+loss_fn - mse
 scheduler - reduce, cyclic
 ```
+
+To Note:
+ * checkpoint and scheduler are optional.
+ * loss_fn may be a list if multiple loss_fns are used
 
 In order to train a model, a solver must be defined for it. A solver is a class that contains the logic for training the model and takes in various arguments in order to do so. These are defined in the `solvers` directory. Every solver should inherit the base solver which sets defaults for every model. The current implementation is shown below 
 
