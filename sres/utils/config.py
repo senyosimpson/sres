@@ -13,6 +13,7 @@ class Config:
         self.epochs = conf['epochs']
         self.loss_fn = conf['loss_fn']
         self.solver = conf['solver']
+        self.patch_size = conf['patch_size']
         
         ds = conf['dataset']
         self.dataset_name = ds['name']

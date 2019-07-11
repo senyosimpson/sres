@@ -44,6 +44,7 @@ if __name__ == '__main__':
     opt_params = conf['optimizer_params']
     sched_name = conf['scheduler_name']
     sched_params = conf['scheduler_params']
+    patch_size = conf['patch_size']
     checkpoint = conf['checkpoint']
 
     model = MODELS[model_name]
@@ -70,7 +71,7 @@ if __name__ == '__main__':
         loss = chkpt['loss']
 
     tsfm = Compose([
-        RandomCrop(96),
+        RandomCrop(patch_size),
         RandomHorizontalFlip(),
         RandomRotateNinety(),
         ToTensor()
@@ -82,6 +83,5 @@ if __name__ == '__main__':
 
     solver = SOLVERS[solver_type]
     solver = solver(model, optimizer, loss_fn, dataloader, scheduler, checkpoint)
-    
     batch_size = ds_params['batch_size']
     solver.solve(epochs, batch_size, args.logdir)

@@ -1,13 +1,14 @@
 {
     "model": "srresnet",
     "solver": "std",
-    "epochs": 10,
+    "epochs": 4650,
     "loss_fn": "mse",
+    "patch_size": 128,
     "dataset": {
-        "name": "div2k",
+        "name": "df2k",
         "params": {
             "batch_size": 16,
-            "num_workers": 2,
+            "num_workers": 4,
             "shuffle": true
         }
     },
