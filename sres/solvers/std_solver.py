@@ -4,29 +4,21 @@ from datetime import datetime
 from .base_solver import BaseSolver
 
 class StandardSolver(BaseSolver):
-    def __init__(self, model, optimizer, loss_fn, dataloader, scheduler=None, checkpoint=None):
-        super().__init__(optimizer, loss_fn, dataloader, scheduler, checkpoint)
+    def __init__(self, model, optimizer, loss_fn, dataloader, scheduler=None):
+        super().__init__(optimizer, loss_fn, dataloader, scheduler)
         self.model = model
         self.logger = self._init_logger('std_solver')
-    
-    def save_checkpoint(self, save_path, model_state_dict, opt_state_dict, epoch, loss):
-        torch.save({
-            'epoch': epoch,
-            'loss': loss,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict()},
-            f = save_path)
-    
+
     def load_checkpoint(self, checkpoint):
-        chkpt = torch.load(self.checkpoint)
+        chkpt = torch.load(checkpoint)
         self.model.load_state_dict(chkpt['model_state_dict'])
         self.optimizer.load_state_dict(chkpt['optimizer_state_dict'])
         self.start_epoch = chkpt['epoch']
     
-    def solve(self, epochs, batch_size, logdir):
+    def solve(self, epochs, batch_size, logdir, checkpoint=None):
         date = datetime.today().strftime('%m_%d')
-        if self.checkpoint:
-            self.load_checkpoint(self.checkpoint)
+        if checkpoint:
+            self.load_checkpoint(checkpoint)
 
         self.logger.info('')
         self.logger.info('Batch Size : %d' % batch_size)
@@ -35,7 +27,7 @@ class StandardSolver(BaseSolver):
         self.logger.info('')
 
         self.model.train()
-        start_epoch = self.start_epoch if self.checkpoint else 0
+        start_epoch = self.start_epoch if checkpoint else 0
         best_loss = 1e8
         for epoch in range(start_epoch, epochs):
             self.logger.info('============== Epoch %d/%d ==============' % (epoch+1, epochs))

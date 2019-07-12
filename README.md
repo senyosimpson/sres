@@ -55,6 +55,8 @@ To Note:
 In order to train a model, a solver must be defined for it. A solver is a class that contains the logic for training the model and takes in various arguments in order to do so. These are defined in the `solvers` directory. Every solver should inherit the base solver which sets defaults for every model. The current implementation is shown below 
 
 ```python
+from abc import ABC, abstractmethod
+
 class BaseSolver(ABC):
     def __init__(self, optimizer, loss_fn, dataloader, scheduler=None):
             super().__init__()
@@ -75,16 +77,42 @@ class BaseSolver(ABC):
         logger.addHandler(handler)
         return logger
 
-    @abstractmethod
-    def save_checkpoint(self):
-        raise NotImplementedError
+    def save_checkpoint(self, save_path, model_state_dict, opt_state_dict, epoch, loss):
+        """
+        Saves a training checkpoint
+        args:
+            save_path (str): path to save checkpoint
+            model_state_dict[s] (dict/list): model state dict[s] to save.
+                if a list of model state dicts, expects a list of format
+                [{name: modelA_state_dict}, {name: modelB_state_dict}] otherwise
+                just pass in the normal state dict and given default name/key,
+                model_state_dict
+            opt_state_dict[s] (dict/list): same principle applies above. Default 
+            name/key given is optimizer_state_dict if a regular state dict is passed in
+            epoch (int): the current epoch
+            loss (torch.tensor): the current loss
+        """
+        info = {'epoch': epoch, 'loss': loss}
+        
+        if isinstance(model_state_dict, list):
+            for state_dict in model_state_dict:
+                info.update(state_dict)
+        else:
+            info.update({'model_state_dict', model_state_dict})
+
+        if isinstance(opt_state_dict, list):
+            for state_dict in opt_state_dict:
+                info.update(state_dict)
+        else:
+            info.update({'optimizer_state_dict': opt_state_dict})
+        torch.save(info, f=save_path)
     
     @abstractmethod
     def load_checkpoint(self, checkpoint):
         raise NotImplementedError
 
     @abstractmethod
-    def solve(self, epochs, batch_size, logdir):
+    def solve(self, epochs, batch_size, logdir, checkpoint=None):
         raise NotImplementedError
 ```
 
@@ -98,14 +126,6 @@ class StandardSolver(BaseSolver):
         super().__init__(optimizer, loss_fn, dataloader, scheduler)
         self.model = model
         self.logger = self._init_logger('std_solver')
-    
-    def save_checkpoint(self, save_path, model_state_dict, opt_state_dict, epoch, loss):
-        torch.save({
-            'epoch': epoch,
-            'loss': loss,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict()},
-            f = save_path)
 
     def load_checkpoint(self, checkpoint):
         chkpt = torch.load(checkpoint)
