@@ -3,14 +3,13 @@ import logging
 from abc import ABC, abstractmethod
 
 
-class BaseSolver:
-    def __init__(self, optimizer, loss_fn, dataloader, scheduler=None, checkpoint=None):
+class BaseSolver(ABC):
+    def __init__(self, optimizer, loss_fn, dataloader, scheduler=None):
             super().__init__()
             self.use_cuda = not False and torch.cuda.is_available()
             self.device = torch.device('cuda' if self.use_cuda else 'cpu')
             self.optimizer = optimizer
             self.scheduler = scheduler
-            self.checkpoint = checkpoint
             self.dataloader = dataloader
             self.loss_fn = loss_fn
             self.start_epoch = 0
