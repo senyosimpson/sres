@@ -53,22 +53,13 @@ if __name__ == '__main__':
     opt = OPTS[opt_name]
     optimizer = opt(model.parameters(), **opt_params)
 
-    use_sched = False
     scheduler = None
     if sched_name and sched_params:
         sched = SCHEDULERS[sched_name]
         scheduler = sched(optimizer, **sched_params)
-        use_sched = True
         
     loss_fn = LOSSES[loss_fn]
     loss_fn = loss_fn()
-
-    if checkpoint:
-        chkpt = torch.load(checkpoint)
-        model.load_state_dict(chkpt['model_state_dict'])
-        optimizer.load_state_dict(chkpt['optimizer_state_dict'])
-        start_epoch = chkpt['epoch']
-        loss = chkpt['loss']
 
     tsfm = Compose([
         RandomCrop(patch_size),
