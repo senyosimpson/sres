@@ -12,6 +12,7 @@ To train a model, a json configuration file must be specified to determine vario
     "solver": "std",
     "epochs": 10,
     "loss_fn": "mse",
+    "patch_size": 128,
     "checkpoint": "path",
     "dataset": {
         "name": "div2k",
@@ -49,21 +50,21 @@ scheduler - reduce, cyclic
 
 To Note:
  * checkpoint and scheduler are optional.
- * loss_fn may be a list if multiple loss_fns are used
+ * loss_fn may be a list if multiple loss functions are used
 
 In order to train a model, a solver must be defined for it. A solver is a class that contains the logic for training the model and takes in various arguments in order to do so. These are defined in the `solvers` directory. Every solver should inherit the base solver which sets defaults for every model. The current implementation is shown below 
 
 ```python
-class BaseSolver:
-    def __init__(self, optimizer, loss_fn, dataloader, scheduler=None, checkpoint=None):
+class BaseSolver(ABC):
+    def __init__(self, optimizer, loss_fn, dataloader, scheduler=None):
             super().__init__()
             self.use_cuda = not False and torch.cuda.is_available()
             self.device = torch.device('cuda' if self.use_cuda else 'cpu')
             self.optimizer = optimizer
             self.scheduler = scheduler
-            self.checkpoint = checkpoint
             self.dataloader = dataloader
             self.loss_fn = loss_fn
+            self.start_epoch = 0
 
     def _init_logger(self, name):
         logger = logging.getLogger(name)
@@ -73,6 +74,14 @@ class BaseSolver:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         return logger
+
+    @abstractmethod
+    def save_checkpoint(self):
+        raise NotImplementedError
+    
+    @abstractmethod
+    def load_checkpoint(self, checkpoint):
+        raise NotImplementedError
 
     @abstractmethod
     def solve(self, epochs, batch_size, logdir):
@@ -85,20 +94,29 @@ The `solve` method must be implemented and is the method called to train the net
 from .base_solver import BaseSolver
 
 class StandardSolver(BaseSolver):
-    def __init__(self, model, optimizer, loss_fn, dataloader, scheduler=None, checkpoint=None):
-        super().__init__(optimizer, loss_fn, dataloader, scheduler, checkpoint)
+    def __init__(self, model, optimizer, loss_fn, dataloader, scheduler=None):
+        super().__init__(optimizer, loss_fn, dataloader, scheduler)
         self.model = model
         self.logger = self._init_logger('std_solver')
-
     
-    def solve(self, epochs, batch_size, logdir):
+    def save_checkpoint(self, save_path, model_state_dict, opt_state_dict, epoch, loss):
+        torch.save({
+            'epoch': epoch,
+            'loss': loss,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict()},
+            f = save_path)
+
+    def load_checkpoint(self, checkpoint):
+        chkpt = torch.load(checkpoint)
+        self.model.load_state_dict(chkpt['model_state_dict'])
+        self.optimizer.load_state_dict(chkpt['optimizer_state_dict'])
+        self.start_epoch = chkpt['epoch']
+    
+    def solve(self, epochs, batch_size, logdir, checkpoint=None):
         date = datetime.today().strftime('%m_%d')
-        if self.checkpoint:
-            chkpt = torch.load(self.checkpoint)
-            self.model.load_state_dict(chkpt['model_state_dict'])
-            self.optimizer.load_state_dict(chkpt['optimizer_state_dict'])
-            start_epoch = chkpt['epoch']
-            loss = chkpt['loss']
+        if checkpoint:
+            self.load_checkpoint(checkpoint)
 
         self.logger.info('')
         self.logger.info('Batch Size : %d' % batch_size)
@@ -107,7 +125,7 @@ class StandardSolver(BaseSolver):
         self.logger.info('')
 
         self.model.train()
-        start_epoch = start_epoch if self.checkpoint else 0
+        start_epoch = self.start_epoch if checkpoint else 0
         best_loss = 1e8
         for epoch in range(start_epoch, epochs):
             self.logger.info('============== Epoch %d/%d ==============' % (epoch+1, epochs))
@@ -133,12 +151,12 @@ class StandardSolver(BaseSolver):
             if mean_loss < best_loss:
                 best_loss = mean_loss
                 save_path = '%s_res_checkpoint_%s%s' % (self.model.name, date, '.pt')
-                torch.save({
-                    'epoch': epoch,
-                    'loss': loss,
-                    'model_state_dict': self.model.state_dict(),
-                    'optimizer_state_dict': self.optimizer.state_dict()},
-                    f = save_path)
+                save_path = os.path.join(logdir, save_path)
+                self.save_checkpoint(save_path,
+                                     self.model.state_dict(),
+                                     self.optimizer.state_dict(),
+                                     epoch,
+                                     loss)
                 self.logger.info('Checkpoint saved to %s' % save_path)
 
         self.logger.info('Training Complete')
@@ -149,3 +167,16 @@ class StandardSolver(BaseSolver):
 To add extra options to a configuration file, they must be specified in the `constants.py` file. This file defines a dictionary for every option (e.g losses, optimizer). Each key in the option links to a class, functions, variable that is instatiated in the `train.py` code at run time.
 
 To get an overview of the current options (as some of the names are not self-explanatory), look in the `constants.py` file.
+
+## Paperspace
+
+To train models, the service used was [Paperspace](https://www.paperspace.com). The script `submit_train_job.sh` is used to submit a job to paperspace. It requires three environment variables to be set, `CONTAINER_NAME, DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD`. The dockerhub username and password are necessary because the repository used is private. If it is public, edit the script accordingly.
+
+In order to use it, a docker container must be created and hosted on a platform such as [DockerHub](https://hub.docker.com). The script, `Dockerfile` can be used to build this docker container. If you are using DockerHub, run the commands
+
+```bash
+docker build -t <hub-user>/<repo-name>[:tag] .
+docker push <hub-user>/<repo-name>[:tag]
+```
+
+This will create a docker container and push it to the required repository. This docker container is then utilized by the script used to submit a training job.
