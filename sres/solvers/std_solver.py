@@ -5,26 +5,28 @@ from .base_solver import BaseSolver
 
 class StandardSolver(BaseSolver):
     def __init__(self, model, optimizer, loss_fn, dataloader, scheduler=None, checkpoint=None):
-        super().__init__()
-        self.use_cuda = not False and torch.cuda.is_available()
-        self.device = torch.device('cuda' if self.use_cuda else 'cpu')
+        super().__init__(optimizer, loss_fn, dataloader, scheduler, checkpoint)
         self.model = model
-        self.optimizer = optimizer
-        self.scheduler = scheduler
-        self.checkpoint = checkpoint
-        self.dataloader = dataloader
-        self.logger = self._init_logger('gan_solver')
-        self.loss_fn = loss_fn
-
+        self.logger = self._init_logger('std_solver')
+    
+    def save_checkpoint(self, save_path, model_state_dict, opt_state_dict, epoch, loss):
+        torch.save({
+            'epoch': epoch,
+            'loss': loss,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict()},
+            f = save_path)
+    
+    def load_checkpoint(self, checkpoint):
+        chkpt = torch.load(self.checkpoint)
+        self.model.load_state_dict(chkpt['model_state_dict'])
+        self.optimizer.load_state_dict(chkpt['optimizer_state_dict'])
+        self.start_epoch = chkpt['epoch']
     
     def solve(self, epochs, batch_size, logdir):
         date = datetime.today().strftime('%m_%d')
         if self.checkpoint:
-            chkpt = torch.load(self.checkpoint)
-            self.model.load_state_dict(chkpt['model_state_dict'])
-            self.optimizer.load_state_dict(chkpt['optimizer_state_dict'])
-            start_epoch = chkpt['epoch']
-            loss = chkpt['loss']
+            self.load_checkpoint(self.checkpoint)
 
         self.logger.info('')
         self.logger.info('Batch Size : %d' % batch_size)
@@ -33,7 +35,7 @@ class StandardSolver(BaseSolver):
         self.logger.info('')
 
         self.model.train()
-        start_epoch = start_epoch if self.checkpoint else 0
+        start_epoch = self.start_epoch if self.checkpoint else 0
         best_loss = 1e8
         for epoch in range(start_epoch, epochs):
             self.logger.info('============== Epoch %d/%d ==============' % (epoch+1, epochs))
@@ -58,13 +60,13 @@ class StandardSolver(BaseSolver):
     
             if mean_loss < best_loss:
                 best_loss = mean_loss
-                save_path = '%s_checkpoint_%d_%s%s' % (self.model.name, epoch+1, date, '.pt')
-                torch.save({
-                    'epoch': epoch,
-                    'loss': loss,
-                    'model_state_dict': self.model.state_dict(),
-                    'optimizer_state_dict': self.optimizer.state_dict()},
-                    f = save_path)
+                save_path = '%s_res_checkpoint_%s%s' % (self.model.name, date, '.pt')
+                save_path = os.path.join(logdir, save_path)
+                self.save_checkpoint(save_path,
+                                     self.model.state_dict(),
+                                     self.optimizer.state_dict(),
+                                     epoch,
+                                     loss)
                 self.logger.info('Checkpoint saved to %s' % save_path)
 
         self.logger.info('Training Complete')

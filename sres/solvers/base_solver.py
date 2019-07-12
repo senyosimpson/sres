@@ -13,6 +13,7 @@ class BaseSolver:
             self.checkpoint = checkpoint
             self.dataloader = dataloader
             self.loss_fn = loss_fn
+            self.start_epoch = 0
 
     def _init_logger(self, name):
         logger = logging.getLogger(name)
@@ -22,6 +23,14 @@ class BaseSolver:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         return logger
+
+    @abstractmethod
+    def save_checkpoint(self):
+        raise NotImplementedError
+    
+    @abstractmethod
+    def load_checkpoint(self, checkpoint):
+        raise NotImplementedError
 
     @abstractmethod
     def solve(self, epochs, batch_size, logdir):
