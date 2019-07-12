@@ -73,6 +73,6 @@ if __name__ == '__main__':
     dataloader =  DataLoader(dataset, **ds_params)
 
     solver = SOLVERS[solver_type]
-    solver = solver(model, optimizer, loss_fn, dataloader, scheduler, checkpoint)
+    solver = solver(model, optimizer, loss_fn, dataloader, scheduler)
     batch_size = ds_params['batch_size']
-    solver.solve(epochs, batch_size, args.logdir)
+    solver.solve(epochs, batch_size, args.logdir, checkpoint)
