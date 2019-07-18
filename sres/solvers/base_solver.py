@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 
 class BaseSolver(ABC):
-    def __init__(self, optimizer, loss_fn, dataloader, scheduler=None):
+    def __init__(self, conf, optimizer, loss_fn, dataloader, scheduler=None):
             super().__init__()
             self.use_cuda = not False and torch.cuda.is_available()
             self.device = torch.device('cuda' if self.use_cuda else 'cpu')
@@ -13,6 +13,8 @@ class BaseSolver(ABC):
             self.dataloader = dataloader
             self.loss_fn = loss_fn
             self.start_epoch = 0
+            self.best_loss = 0
+            self.conf = conf
 
     def _init_logger(self, name):
         logger = logging.getLogger(name)
@@ -23,7 +25,7 @@ class BaseSolver(ABC):
         logger.addHandler(handler)
         return logger
 
-    def save_checkpoint(self, save_path, model_state_dict, opt_state_dict, epoch, loss):
+    def save_checkpoint(self, save_path, model_state_dict, opt_state_dict, conf, epoch, loss):
         """
         Saves a training checkpoint
         args:
@@ -37,13 +39,13 @@ class BaseSolver(ABC):
             epoch (int): the current epoch
             loss (torch.tensor): the current loss
         """
-        info = {'epoch': epoch, 'loss': loss}
+        info = {'epoch': epoch, 'loss': loss, 'config': conf}
         
         if isinstance(model_state_dict, list):
             for state_dict in model_state_dict:
                 info.update(state_dict)
         else:
-            info.update({'model_state_dict', model_state_dict})
+            info.update({'model_state_dict': model_state_dict})
 
         if isinstance(opt_state_dict, list):
             for state_dict in opt_state_dict:

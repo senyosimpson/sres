@@ -4,8 +4,8 @@ from datetime import datetime
 from .base_solver import BaseSolver
 
 class StandardSolver(BaseSolver):
-    def __init__(self, model, optimizer, loss_fn, dataloader, scheduler=None):
-        super().__init__(optimizer, loss_fn, dataloader, scheduler)
+    def __init__(self, conf, model, optimizer, loss_fn, dataloader, scheduler=None):
+        super().__init__(conf, optimizer, loss_fn, dataloader, scheduler)
         self.model = model
         self.logger = self._init_logger('std_solver')
 
@@ -14,6 +14,7 @@ class StandardSolver(BaseSolver):
         self.model.load_state_dict(chkpt['model_state_dict'])
         self.optimizer.load_state_dict(chkpt['optimizer_state_dict'])
         self.start_epoch = chkpt['epoch']
+        self.best_loss = chkpt['loss']
     
     def solve(self, epochs, batch_size, logdir, checkpoint=None):
         date = datetime.today().strftime('%m_%d')
@@ -28,7 +29,7 @@ class StandardSolver(BaseSolver):
 
         self.model.train()
         start_epoch = self.start_epoch if checkpoint else 0
-        best_loss = 1e8
+        best_loss = self.best_loss if checkpoint else 1e8
         for epoch in range(start_epoch, epochs):
             self.logger.info('============== Epoch %d/%d ==============' % (epoch+1, epochs))
             mean_loss = 0
@@ -48,7 +49,7 @@ class StandardSolver(BaseSolver):
             self.logger.info('epoch : %d, average loss : %.3f' % (epoch+1, mean_loss/len(self.dataloader)))
 
             if self.scheduler:
-                self.scheduler.step()
+                self.scheduler.step(mean_loss)
     
             if mean_loss < best_loss:
                 best_loss = mean_loss
@@ -57,6 +58,7 @@ class StandardSolver(BaseSolver):
                 self.save_checkpoint(save_path,
                                      self.model.state_dict(),
                                      self.optimizer.state_dict(),
+                                     self.conf,
                                      epoch,
                                      loss)
                 self.logger.info('Checkpoint saved to %s' % save_path)
