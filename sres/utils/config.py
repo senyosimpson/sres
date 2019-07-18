@@ -35,6 +35,11 @@ class Config:
             self.checkpoint = conf['checkpoint']
         else:
             self.checkpoint = None
+        
+        if 'generator_path' in conf:
+            self.generator_path = conf['generator_path']
+        else:
+            self.generator_path = None
 
     def __getitem__(self, key):
         return getattr(self, key)
