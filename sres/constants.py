@@ -3,7 +3,8 @@ from sres.datasets import *
 from sres.solvers import *
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau, CyclicLR
-from torch.nn import MSELoss
+from torch.nn import MSELoss, BCELoss
+from sres.losses import PerceptualLoss, AdversarialLoss
 
 
 MODELS = {
@@ -14,7 +15,8 @@ MODELS = {
 
 DATASETS = {
     'div2k': Div2K,
-    'df2k': DF2K
+    'df2k': DF2K,
+    'set5': Set5
 }
 
 OPTS = {
@@ -22,7 +24,10 @@ OPTS = {
 }
 
 LOSSES = {
-    'mse': MSELoss
+    'mse': MSELoss,
+    'bce': BCELoss,
+    'perceptual': PerceptualLoss,
+    'adversarial': AdversarialLoss
 }
 
 SCHEDULERS = {
