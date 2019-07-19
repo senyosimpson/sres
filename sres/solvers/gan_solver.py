@@ -1,33 +1,39 @@
 import os
+import torch
 from datetime import datetime
 from .base_solver import BaseSolver
 
 class GANSolver(BaseSolver):
-    def __init__(self, generator, discriminator, optimizers, losses, dataloader, scheduler=None, checkpoint=None):
-        super().__init__()
-        self.use_cuda = not False and torch.cuda.is_available()
-        self.device = torch.device('cuda' if self.use_cuda else 'cpu')
+    def __init__(self, conf, generator, discriminator, optimizers, loss_fns, dataloader, generator_path=None, scheduler=None):
+        super().__init__(conf, optimizers, loss_fns, dataloader, scheduler)
         self.generator = generator
+        if generator_path:
+            self.load_generator(generator_path)
         self.discriminator = discriminator
-        self.generator.to(self.device); self.discriminator.to(self.device)
-        self.g_optimizer, self.d_optimizer = optimizers
+        self.g_optimizer, self.d_optimizer = self.optimizer
         self.scheduler = scheduler
-        self.checkpoint = checkpoint
         self.dataloader = dataloader
         self.logger = self._init_logger('gan_solver')
-        self.g_loss, self.d_loss = losses
+        self.g_loss_fn, self.d_loss_fn = self.loss_fn
 
+    def load_generator(self, path):
+        chkpt = torch.load(path)
+        model_state_dict = chkpt['model_state_dict']
+        self.generator.load_state_dict(model_state_dict)
+
+    def load_checkpoint(self, checkpoint):
+        chkpt = torch.load(self.checkpoint)
+        self.generator.load_state_dict(chkpt['generator_state_dict'])
+        self.discriminator.load_state_dict(chkpt['discriminator_state_dict'])
+        self.g_optimizer.load_state_dict(chkpt['optimizer_gen_state_dict'])
+        self.d_optimizer.load_state_dict(chkpt['optimizer_disc_state_dict'])
+        start_epoch = chkpt['epoch']
+        loss = chkpt['loss']
     
-    def solve(self, epochs, batch_size, logdir):
+    def solve(self, epochs, batch_size, logdir, checkpoint=None):
         date = datetime.today().strftime('%m_%d')
-        if self.checkpoint:
-            chkpt = torch.load(self.checkpoint)
-            self.generator.load_state_dict(chkpt['generator_state_dict'])
-            self.discriminator.load_state_dict(chkpt['discriminator_state_dict'])
-            self.g_optimizer.load_state_dict(chkpt['optimizer_gen_state_dict'])
-            self.d_optimizer.load_state_dict(chkpt['optimizer_disc_state_dict'])
-            start_epoch = chkpt['epoch']
-            loss = chkpt['loss']
+        if checkpoint:
+            self.load_checkpoint(checkpoint)
 
         self.logger.info('')
         self.logger.info('Batch Size : %d' % batch_size)
@@ -37,8 +43,8 @@ class GANSolver(BaseSolver):
 
         self.generator.train()
         self.discriminator.train()
-        start_epoch = start_epoch if start_epoch else 0
-        best_loss = 0
+        start_epoch = self.start_epoch if checkpoint else 0
+        best_loss = self.best_loss if checkpoint else 1e8
         for epoch in range(start_epoch, epochs):
             self.logger.info('============== Epoch %d/%d ==============' % (epoch+1, epochs))
             mean_loss = 0
@@ -46,24 +52,29 @@ class GANSolver(BaseSolver):
                 lres_img, hres_img = image_pair
                 lres_img.to(self.device); hres_img.to(self.device)
 
-                generated_img = self.generator(lres_img)
+                generated_img = self.generator(lres_img).detach()
                 prediction_generated = self.discriminator(generated_img)
                 prediction_real = self.discriminator(hres_img)
 
                 # train discriminator
-                self.d_optimizer.zero_grad()
+                self.discriminator.zero_grad()
                 target_gen = 0.7 + (torch.rand(batch_size, 1) * 0.5) # between 0.7 - 1.2
                 target_real = torch.rand(batch_size, 1) * 0.3 # between 0.0 - 0.3
 
                 target_gen.to(self.device); target_real.to(self.device)
-                d_loss = self.d_loss(prediction_generated, target_gen) + self.d_loss(prediction_real, target_real)
-                d_loss.backwards()
+                d_loss_fake = self.d_loss_fn(prediction_generated, target_gen)
+                d_loss_fake.backward()
+                d_loss_real = self.d_loss_fn(prediction_real, target_real)
+                d_loss_real.backward()
+                d_loss = d_loss_real + d_loss_fake
                 self.d_optimizer.step()
 
                 # train generator
-                self.g_optimizer.zero_grad()
-                g_loss = self.g_loss(generated_img, hres_img, prediction_generated)
-                g_loss.backwards()
+                self.generator.zero_grad()
+                generated_img = self.generator(lres_img)
+                prediction_generated = self.discriminator(generated_img).detach()
+                g_loss = self.g_loss_fn(generated_img, hres_img, prediction_generated)
+                g_loss.backward()
                 self.g_optimizer.step()
 
                 self.logger.info('Step: %d, Gen loss: %.3f, Discrim Loss: %.3f' % (step, g_loss.item(), d_loss.item()))
@@ -76,14 +87,22 @@ class GANSolver(BaseSolver):
             if mean_loss < best_loss:
                 best_loss = mean_loss
                 save_path = '%s_checkpoint_%d_%s%s' % (self.generator.name, epoch+1, date, '.pt')
-                torch.save({
-                    'epoch': epoch,
-                    'loss': loss,
-                    'generator_state_dict': self.generator.state_dict(),
-                    'discriminator_state_dict': self.discriminator.state_dict(),
-                    'optimizer_gen_state_dict': self.g_optimizer.state_dict(),
-                    'optimizer_disc_state_dict': self.d_optimizer.state_dict()},
-                    f = os.path.join(logdir, save_path))
+                save_path = os.path.join(logdir, save_path)
+                model_state_dicts = [
+                    {'generator_state_dict': self.generator.state_dict()},
+                    {'discriminator_state_dict': self.discriminator.state_dict()}
+                ]
+
+                optimizer_state_dicts = [
+                    {'optimizer_gen_state_dict': self.g_optimizer.state_dict()},
+                    {'optimizer_disc_state_dict': self.d_optimizer.state_dict()}
+                ]
+                self.save_checkpoint(save_path,
+                                     model_state_dicts,
+                                     optimizer_state_dicts,
+                                     self.conf,
+                                     epoch,
+                                     loss=0)
                 self.logger.info('Checkpoint saved to %s' % save_path)
 
         self.logger.info('Training Complete')
