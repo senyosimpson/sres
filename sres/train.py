@@ -46,20 +46,41 @@ if __name__ == '__main__':
     sched_params = conf['scheduler_params']
     patch_size = conf['patch_size']
     checkpoint = conf['checkpoint']
+    generator_path = conf['generator_path']
 
     model = MODELS[model_name]
-    model = model().to(device)
+    if isinstance(model, list):
+        generator, discriminator = MODELS[model_name]
+        generator = generator().to(device)
+        discriminator = discriminator(input_shape=patch_size).to(device)
+    else:
+        model = model().to(device)
 
     opt = OPTS[opt_name]
-    optimizer = opt(model.parameters(), **opt_params)
+    if 'gan' in model_name:
+        gen_optimizer = opt(generator.parameters(), **opt_params)
+        discrim_optimizer = opt(discriminator.parameters(), **opt_params)
+        optimizer = [gen_optimizer, discrim_optimizer]
+    else:
+        optimizer = opt(model.parameters(), **opt_params)
+
 
     scheduler = None
     if sched_name and sched_params:
         sched = SCHEDULERS[sched_name]
         scheduler = sched(optimizer, **sched_params)
-        
-    loss_fn = LOSSES[loss_fn]
-    loss_fn = loss_fn()
+    
+    if isinstance(loss_fn, list):
+        gen_loss_name, discrim_loss_name = loss_fn
+        gen_loss = LOSSES[gen_loss_name]
+        discrim_loss = LOSSES[discrim_loss_name]
+
+        gen_loss = gen_loss()
+        discrim_loss = discrim_loss()
+        loss_fn = [gen_loss, discrim_loss]
+    else:
+        loss_fn = LOSSES[loss_fn]
+        loss_fn = loss_fn()
 
     tsfm = Compose([
         RandomCrop(patch_size),
@@ -73,6 +94,9 @@ if __name__ == '__main__':
     dataloader =  DataLoader(dataset, **ds_params)
 
     solver = SOLVERS[solver_type]
-    solver = solver(model, optimizer, loss_fn, dataloader, scheduler)
+    if 'gan' in model_name:
+        solver = solver(conf, generator, discriminator, optimizer, loss_fn, dataloader, generator_path, scheduler)
+    else:
+        solver = solver(conf, model, optimizer, loss_fn, dataloader, scheduler)
     batch_size = ds_params['batch_size']
     solver.solve(epochs, batch_size, args.logdir, checkpoint)
