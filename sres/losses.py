@@ -44,5 +44,5 @@ class VGGLoss(nn.Module):
     def forward(self, gen_hr, real_hr, beta=0.006):
         gen_hr_feat_map = self.feature_extractor(gen_hr)
         real_hr_feat_map = self.feature_extractor(real_hr)
-        loss = beta * self.mse(real_hr_feat_map, gen_hr_feat_map)
+        loss = beta * self.mse(gen_hr_feat_map, real_hr_feat_map)
         return loss
