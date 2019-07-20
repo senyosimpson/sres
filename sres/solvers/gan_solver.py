@@ -15,6 +15,8 @@ class GANSolver(BaseSolver):
         self.dataloader = dataloader
         self.logger = self._init_logger('gan_solver')
         self.g_loss_fn, self.d_loss_fn = self.loss_fn
+        self.best_gen_loss = 1e8
+        self.best_disc_loss = 1e8
 
     def load_generator(self, path):
         chkpt = torch.load(path)
@@ -28,7 +30,8 @@ class GANSolver(BaseSolver):
         self.g_optimizer.load_state_dict(chkpt['optimizer_gen_state_dict'])
         self.d_optimizer.load_state_dict(chkpt['optimizer_disc_state_dict'])
         start_epoch = chkpt['epoch']
-        loss = chkpt['loss']
+        self.best_gen_loss = chkpt['loss']['best_gen_loss']
+        self.best_disc_loss = chkpt['loss']['best_disc_loss']
     
     def solve(self, epochs, batch_size, logdir, checkpoint=None):
         date = datetime.today().strftime('%m_%d')
@@ -44,11 +47,19 @@ class GANSolver(BaseSolver):
         self.generator.train()
         self.discriminator.train()
         start_epoch = self.start_epoch if checkpoint else 0
-        best_loss = self.best_loss if checkpoint else 1e8
+        best_gen_loss = self.best_gen_loss if checkpoint else 1e8
+        best_disc_loss = self.best_disc_loss if checkpoint else 1e8
         for epoch in range(start_epoch, epochs):
             self.logger.info('============== Epoch %d/%d ==============' % (epoch+1, epochs))
-            mean_loss = 0
+            mean_gen_loss = 0
+            mean_disc_loss = 0
             for step, image_pair in enumerate(self.dataloader):
+                # discriminator has dense network which requires
+                # batch size of 16 therefore skip the last set
+                # of images
+                if step == (len(self.dataloader)-1):
+                    continue
+
                 lres_img, hres_img = image_pair
                 lres_img.to(self.device); hres_img.to(self.device)
 
@@ -76,16 +87,21 @@ class GANSolver(BaseSolver):
                 g_loss = self.g_loss_fn(generated_img, hres_img, prediction_generated)
                 g_loss.backward()
                 self.g_optimizer.step()
+                mean_gen_loss += g_loss.item()
+                mean_disc_loss += d_loss.item()
 
                 self.logger.info('Step: %d, Gen loss: %.3f, Discrim Loss: %.3f' % (step, g_loss.item(), d_loss.item()))
 
             if self.scheduler:
                 self.scheduler.step()
-    
-            self.logger.info('epoch : %d, average loss : %.3f' % (epoch+1, 3.333))
 
-            if mean_loss < best_loss:
-                best_loss = mean_loss
+            _gen_loss = mean_gen_loss / (len(self.dataloader) - 1)
+            _disc_loss = mean_disc_loss / (len(self.dataloader) - 1)
+            self.logger.info('epoch : %d, average gen loss : %.3f, average discrim loss : %.3f' % (epoch+1, _gen_loss, _disc_loss))
+
+            if mean_gen_loss < best_gen_loss and mean_disc_loss < best_disc_loss:
+                best_gen_loss = mean_gen_loss
+                best_disc_loss = mean_disc_loss
                 save_path = '%s_checkpoint_%d_%s%s' % (self.generator.name, epoch+1, date, '.pt')
                 save_path = os.path.join(logdir, save_path)
                 model_state_dicts = [
@@ -97,12 +113,14 @@ class GANSolver(BaseSolver):
                     {'optimizer_gen_state_dict': self.g_optimizer.state_dict()},
                     {'optimizer_disc_state_dict': self.d_optimizer.state_dict()}
                 ]
+
+                loss = {'best_gen_loss': best_gen_loss, 'best_disc_loss': best_disc_loss}
                 self.save_checkpoint(save_path,
                                      model_state_dicts,
                                      optimizer_state_dicts,
                                      self.conf,
                                      epoch,
-                                     loss=0)
+                                     loss)
                 self.logger.info('Checkpoint saved to %s' % save_path)
 
         self.logger.info('Training Complete')
