@@ -9,6 +9,7 @@ class Config:
         with open(path, mode='r') as f:
             conf = json.load(f)
         
+        self.conf = conf
         self.model = conf['model']
         self.epochs = conf['epochs']
         self.loss_fn = conf['loss_fn']
@@ -43,3 +44,6 @@ class Config:
 
     def __getitem__(self, key):
         return getattr(self, key)
+    
+    def __str__(self):
+        return str(self.conf)
