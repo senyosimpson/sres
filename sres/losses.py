@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import MSELoss
+from torch.nn import MSELoss, BCELoss
 from torchvision.models import vgg19
 
 
@@ -9,8 +9,9 @@ class AdversarialLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, probabiliites):
-        loss = -torch.log(probabiliites).sum()
+    def forward(self, probs, target_probs):
+        loss = target_probs * (-torch.log(probs))
+        loss = torch.sum(loss)
         return loss
 
 
@@ -24,11 +25,12 @@ class PerceptualLoss(nn.Module):
         self.content_losses = {'vgg': VGGLoss, 'mse': MSELoss}
         self.content_loss = self.content_losses[content_loss_type]()
         self.adversarial_loss = AdversarialLoss()
+        self.bce = BCELoss()
         self.beta = 10e-3
 
-    def forward(self, output, target, probabiliites):
+    def forward(self, output, target, probs, target_probs):
         loss = self.content_loss(output, target) + \
-            self.beta * self.adversarial_loss(probabiliites)
+            self.beta * self.bce(probs, target_probs)
         return loss
 
 
