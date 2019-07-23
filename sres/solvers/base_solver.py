@@ -14,7 +14,7 @@ class BaseSolver(ABC):
             self.loss_fn = loss_fn
             self.start_epoch = 0
             self.best_loss = 0
-            self.conf = conf
+            self.conf = conf.conf
 
     def _init_logger(self, name):
         logger = logging.getLogger(name)
