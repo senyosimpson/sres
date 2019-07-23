@@ -63,16 +63,16 @@ class GANSolver(BaseSolver):
                 lres_img, hres_img = image_pair
                 lres_img.to(self.device); hres_img.to(self.device)
 
-                generated_img = self.generator(lres_img).detach()
-                prediction_generated = self.discriminator(generated_img)
-                prediction_real = self.discriminator(hres_img)
-
                 # train discriminator
                 self.discriminator.zero_grad()
-                target_gen = 0.7 + (torch.rand(batch_size, 1) * 0.5) # between 0.7 - 1.2
-                target_real = torch.rand(batch_size, 1) * 0.3 # between 0.0 - 0.3
+                generated_img = self.generator(lres_img)
+                prediction_generated = self.discriminator(generated_img.detach())
+                prediction_real = self.discriminator(hres_img)
 
+                target_real = 0.8 + (torch.rand(batch_size, 1) * 0.2) # between 0.8 - 1.0
+                target_gen = torch.rand(batch_size, 1) * 0.2 # between 0.0 - 0.2
                 target_gen.to(self.device); target_real.to(self.device)
+
                 d_loss_fake = self.d_loss_fn(prediction_generated, target_gen)
                 d_loss_fake.backward()
                 d_loss_real = self.d_loss_fn(prediction_real, target_real)
@@ -82,11 +82,12 @@ class GANSolver(BaseSolver):
 
                 # train generator
                 self.generator.zero_grad()
-                generated_img = self.generator(lres_img)
-                prediction_generated = self.discriminator(generated_img).detach()
-                g_loss = self.g_loss_fn(generated_img, hres_img, prediction_generated)
+                prediction_generated = prediction_generated.detach()
+                target_real = torch.ones(batch_size, 1).to(self.device)
+                g_loss = self.g_loss_fn(generated_img, hres_img, prediction_generated, target_real)
                 g_loss.backward()
                 self.g_optimizer.step()
+                
                 mean_gen_loss += g_loss.item()
                 mean_disc_loss += d_loss.item()
 
@@ -99,7 +100,7 @@ class GANSolver(BaseSolver):
             _disc_loss = mean_disc_loss / (len(self.dataloader) - 1)
             self.logger.info('epoch : %d, average gen loss : %.3f, average discrim loss : %.3f' % (epoch+1, _gen_loss, _disc_loss))
 
-            if mean_gen_loss < best_gen_loss and mean_disc_loss < best_disc_loss:
+            if epoch % 10 == 0:
                 best_gen_loss = mean_gen_loss
                 best_disc_loss = mean_disc_loss
                 save_path = '%s_checkpoint_%d_%s%s' % (self.generator.name, epoch+1, date, '.pt')
