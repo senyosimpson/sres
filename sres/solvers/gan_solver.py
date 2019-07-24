@@ -82,23 +82,23 @@ class GANSolver(BaseSolver):
 
                 # train generator
                 self.generator.zero_grad()
-                prediction_generated = prediction_generated.detach()
                 target_real = torch.ones(batch_size, 1).to(self.device)
-                g_loss = self.g_loss_fn(generated_img, hres_img, prediction_generated, target_real)
+                g_loss = self.g_loss_fn(generated_img, hres_img,
+                    prediction_generated.detach(), target_real)
                 g_loss.backward()
                 self.g_optimizer.step()
                 
                 mean_gen_loss += g_loss.item()
                 mean_disc_loss += d_loss.item()
 
-                self.logger.info('Step: %d, Gen loss: %.3f, Discrim Loss: %.3f' % (step, g_loss.item(), d_loss.item()))
+                self.logger.info('Step: %d, Gen loss: %.5f, Discrim Loss: %.5f' % (step, g_loss.item(), d_loss.item()))
 
             if self.scheduler:
                 self.scheduler.step()
 
             _gen_loss = mean_gen_loss / (len(self.dataloader) - 1)
             _disc_loss = mean_disc_loss / (len(self.dataloader) - 1)
-            self.logger.info('epoch : %d, average gen loss : %.3f, average discrim loss : %.3f' % (epoch+1, _gen_loss, _disc_loss))
+            self.logger.info('epoch : %d, average gen loss : %.5f, average discrim loss : %.5f' % (epoch+1, _gen_loss, _disc_loss))
 
             if epoch % 10 == 0:
                 best_gen_loss = mean_gen_loss
