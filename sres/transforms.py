@@ -21,12 +21,35 @@ class Transpose:
         sample = (lres_img, hres_img)
         return sample
 
-    
-class Normalize:
+class Standardize:
     def __call__(self, sample):
         lres_img, hres_img = sample
         lres_img = (lres_img - lres_img.min()) / (lres_img.max() - lres_img.min())
-        hres_img = 2 * (hres_img - hres_img.min()) / (hres_img.max() - hres_img.min())-1
+        hres_img = (hres_img - hres_img.min()) / (hres_img.max() - hres_img.min())
+        sample = (lres_img, hres_img)
+        return sample
+
+
+class Denormalize:
+    def __call__(self, sample, mean, std):
+        lres_img, hres_img = sample
+        mean = torch.as_tensor(mean, dtype=torch.float32, device=lres_img.device)
+        std = torch.as_tensor(std, dtype=torch.float32, device=lres_img.device)
+        lres_img.mul_(std[:, None, None]).add_(mean[:, None, None])
+        hres_img.mul_(std[:, None, None]).add_(mean[:, None, None])
+        sample = (lres_img, hres_img)
+        return sample
+
+
+class Normalize:
+    def __init__(self, mean, std):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, sample):
+        lres_img, hres_img = sample
+        lres_img = TF.normalize(lres_img, self.mean, self.std)
+        hres_img = TF.normalize(hres_img, self.mean, self.std)
         sample = (lres_img, hres_img)
         return sample
 
