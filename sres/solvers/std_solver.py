@@ -43,10 +43,10 @@ class StandardSolver(BaseSolver):
                 loss.backward()
                 self.optimizer.step()
 
-                self.logger.info('step: %d, loss: %.3f' % (step, loss.item()))
+                self.logger.info('step: %d, loss: %.5f' % (step, loss.item()))
                 mean_loss += loss.item()
     
-            self.logger.info('epoch : %d, average loss : %.3f' % (epoch+1, mean_loss/len(self.dataloader)))
+            self.logger.info('epoch : %d, average loss : %.5f' % (epoch+1, mean_loss/len(self.dataloader)))
 
             if self.scheduler:
                 self.scheduler.step(mean_loss)
