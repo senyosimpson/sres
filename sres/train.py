@@ -86,7 +86,10 @@ if __name__ == '__main__':
         RandomCrop(patch_size),
         RandomHorizontalFlip(),
         RandomRotateNinety(),
-        ToTensor()
+        ToTensor(),
+        Normalize(
+            [0.485, 0.456, 0.406],
+            [0.229, 0.224, 0.225])
     ])
 
     ds = DATASETS[ds_name]
@@ -98,5 +101,6 @@ if __name__ == '__main__':
         solver = solver(conf, generator, discriminator, optimizer, loss_fn, dataloader, generator_path, scheduler)
     else:
         solver = solver(conf, model, optimizer, loss_fn, dataloader, scheduler)
+
     batch_size = ds_params['batch_size']
     solver.solve(epochs, batch_size, args.logdir, checkpoint)
