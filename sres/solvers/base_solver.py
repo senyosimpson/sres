@@ -4,17 +4,33 @@ from abc import ABC, abstractmethod
 
 
 class BaseSolver(ABC):
+    """ Base class for solver objects. Defines an interface
+    for all derived solvers to follow.
+
+    Every derived class must implement the load_checkpoint and solve
+    methods which are used for loading checkpoints and defining the logic
+    for training a model respectively.
+    """
     def __init__(self, conf, optimizer, loss_fn, dataloader, scheduler=None):
-            super().__init__()
-            self.use_cuda = not False and torch.cuda.is_available()
-            self.device = torch.device('cuda' if self.use_cuda else 'cpu')
-            self.optimizer = optimizer
-            self.scheduler = scheduler
-            self.dataloader = dataloader
-            self.loss_fn = loss_fn
-            self.start_epoch = 0
-            self.best_loss = 0
-            self.conf = conf.conf
+        """
+        args:
+            conf (Config): specified config used to train model
+            optimizer (torch.Optim): optimizer to use for training 
+                (must be instantiated)
+            loss_fn ():
+            dataloader (): pytorch dataloader object (must be instantiated)
+            scheduler (): pytorch scheduling object (must be instantiated)
+        """
+        super().__init__()
+        self.use_cuda = not False and torch.cuda.is_available()
+        self.device = torch.device('cuda' if self.use_cuda else 'cpu')
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+        self.dataloader = dataloader
+        self.loss_fn = loss_fn
+        self.start_epoch = 0
+        self.best_loss = 0
+        self.conf = conf.conf
 
     def _init_logger(self, name):
         logger = logging.getLogger(name)
