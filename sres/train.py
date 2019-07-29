@@ -17,27 +17,19 @@ if __name__ == '__main__':
                         type=str,
                         required=True,
                         help='path to the config file')
-    parser.add_argument('--root-dir',
-                        type=str,
-                        required=True,
-                        help='root directory for dataset')
-    parser.add_argument('--logdir',
-                        type=str,
-                        required=True,
-                        help='path to save checkpoints')
     args = parser.parse_args()
 
     use_cuda = not False and torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
 
-    # copy config to log dir
-    shutil.copy(args.config, args.logdir)
     # unpack config
     conf = Config(path=args.config)
+    logdir = conf['logdir']
     model_name = conf['model']
     solver_type = conf['solver']
     epochs = conf['epochs']
     loss_fn = conf['loss_fn']
+    ds_root = conf['dataset_root']
     ds_name = conf['dataset_name']
     ds_params = conf['dataset_params']
     opt_name = conf['optimizer_name']
@@ -47,6 +39,9 @@ if __name__ == '__main__':
     patch_size = conf['patch_size']
     checkpoint = conf['checkpoint']
     generator_path = conf['generator_path']
+
+    # copy config to log dir
+    shutil.copy(args.config, logdir)
 
     model = MODELS[model_name]
     if isinstance(model, list):
@@ -86,14 +81,11 @@ if __name__ == '__main__':
         RandomCrop(patch_size),
         RandomHorizontalFlip(),
         RandomRotateNinety(),
-        ToTensor(),
-        Normalize(
-            [0.485, 0.456, 0.406],
-            [0.229, 0.224, 0.225])
+        ToTensor()
     ])
 
     ds = DATASETS[ds_name]
-    dataset = ds(args.root_dir, transform=tsfm)
+    dataset = ds(ds_root, transform=tsfm)
     dataloader =  DataLoader(dataset, **ds_params)
 
     solver = SOLVERS[solver_type]
@@ -103,4 +95,4 @@ if __name__ == '__main__':
         solver = solver(conf, model, optimizer, loss_fn, dataloader, scheduler)
 
     batch_size = ds_params['batch_size']
-    solver.solve(epochs, batch_size, args.logdir, checkpoint)
+    solver.solve(epochs, batch_size, logdir, checkpoint)
