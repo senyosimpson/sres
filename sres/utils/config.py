@@ -10,6 +10,7 @@ class Config:
             conf = json.load(f)
         
         self.conf = conf
+        self.logdir = conf['logdir']
         self.model = conf['model']
         self.epochs = conf['epochs']
         self.loss_fn = conf['loss_fn']
@@ -17,6 +18,7 @@ class Config:
         self.patch_size = conf['patch_size']
         
         ds = conf['dataset']
+        self.dataset_root = ds['root']
         self.dataset_name = ds['name']
         self.dataset_params = ds['params']
 
