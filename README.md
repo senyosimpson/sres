@@ -4,10 +4,11 @@ Undergraduate thesis on super resolution
 
 ## Training a model
 
-To train a model, a json configuration file must be specified to determine various options for training. The configuration file is saved to the log directory when a job is run. An example configuration file is shown below
+To train a model, a json configuration file must be specified to determine various options for training. The configuration file is automatically saved to the log directory when a job is run and is saved within a model checkpoint. An example configuration file is shown below
 
 ```json
 {
+    "logdir": "/artifacts",
     "model": "srresnet",
     "solver": "std",
     "epochs": 10,
@@ -15,6 +16,7 @@ To train a model, a json configuration file must be specified to determine vario
     "patch_size": 128,
     "checkpoint": "path",
     "dataset": {
+        "root": "datasets/div2k",
         "name": "div2k",
         "params": {
             "batch_size": 16,
@@ -38,13 +40,13 @@ To train a model, a json configuration file must be specified to determine vario
 }
 ```
 
-The list of available of options for each parameter are
+The list of available of options for each option are
 ```
-model - srresnet, srgan, esrgan 
+model - srresnet, srgan
 solver - std, gan
-dataset - div2k, flickr2k, df2k
+dataset - div2k, df2k
 optimizer - adam
-loss_fn - mse
+loss_fn - mse, perceptual, adversarial
 scheduler - reduce, cyclic
 ```
 
@@ -55,18 +57,34 @@ To Note:
 In order to train a model, a solver must be defined for it. A solver is a class that contains the logic for training the model and takes in various arguments in order to do so. These are defined in the `solvers` directory. Every solver should inherit the base solver which sets defaults for every model. The current implementation is shown below 
 
 ```python
-from abc import ABC, abstractmethod
-
 class BaseSolver(ABC):
-    def __init__(self, optimizer, loss_fn, dataloader, scheduler=None):
-            super().__init__()
-            self.use_cuda = not False and torch.cuda.is_available()
-            self.device = torch.device('cuda' if self.use_cuda else 'cpu')
-            self.optimizer = optimizer
-            self.scheduler = scheduler
-            self.dataloader = dataloader
-            self.loss_fn = loss_fn
-            self.start_epoch = 0
+    """ Base class for solver objects. Defines an interface
+    for all derived solvers to follow.
+
+    Every derived class must implement the load_checkpoint and solve
+    methods which are used for loading checkpoints and defining the logic
+    for training a model respectively.
+    """
+    def __init__(self, conf, optimizer, loss_fn, dataloader, scheduler=None):
+        """
+        args:
+            conf (Config): specified config used to train model
+            optimizer (torch.Optim): optimizer to use for training 
+                (must be instantiated)
+            loss_fn ():
+            dataloader (): pytorch dataloader object (must be instantiated)
+            scheduler (): pytorch scheduler object (must be instantiated)
+        """
+        super().__init__()
+        self.use_cuda = not False and torch.cuda.is_available()
+        self.device = torch.device('cuda' if self.use_cuda else 'cpu')
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+        self.dataloader = dataloader
+        self.loss_fn = loss_fn
+        self.start_epoch = 0
+        self.best_loss = 0
+        self.conf = conf.conf
 
     def _init_logger(self, name):
         logger = logging.getLogger(name)
@@ -77,7 +95,7 @@ class BaseSolver(ABC):
         logger.addHandler(handler)
         return logger
 
-    def save_checkpoint(self, save_path, model_state_dict, opt_state_dict, epoch, loss):
+    def save_checkpoint(self, save_path, model_state_dict, opt_state_dict, conf, epoch, loss):
         """
         Saves a training checkpoint
         args:
@@ -85,20 +103,19 @@ class BaseSolver(ABC):
             model_state_dict[s] (dict/list): model state dict[s] to save.
                 if a list of model state dicts, expects a list of format
                 [{name: modelA_state_dict}, {name: modelB_state_dict}] otherwise
-                just pass in the normal state dict and given default name/key,
-                model_state_dict
-            opt_state_dict[s] (dict/list): same principle applies above. Default 
-            name/key given is optimizer_state_dict if a regular state dict is passed in
+                just pass in the normal state dict and given default name/key, model_state_dict
+            opt_state_dict[s] (dict/list): same principle applies above. Default name/key given
+                is optimizer_state_dict if a regular state dict is passed in
             epoch (int): the current epoch
             loss (torch.tensor): the current loss
         """
-        info = {'epoch': epoch, 'loss': loss}
+        info = {'epoch': epoch, 'loss': loss, 'config': conf}
         
         if isinstance(model_state_dict, list):
             for state_dict in model_state_dict:
                 info.update(state_dict)
         else:
-            info.update({'model_state_dict', model_state_dict})
+            info.update({'model_state_dict': model_state_dict})
 
         if isinstance(opt_state_dict, list):
             for state_dict in opt_state_dict:
@@ -122,8 +139,8 @@ The `solve` method must be implemented and is the method called to train the net
 from .base_solver import BaseSolver
 
 class StandardSolver(BaseSolver):
-    def __init__(self, model, optimizer, loss_fn, dataloader, scheduler=None):
-        super().__init__(optimizer, loss_fn, dataloader, scheduler)
+    def __init__(self, conf, model, optimizer, loss_fn, dataloader, scheduler=None):
+        super().__init__(conf, optimizer, loss_fn, dataloader, scheduler)
         self.model = model
         self.logger = self._init_logger('std_solver')
 
@@ -132,6 +149,7 @@ class StandardSolver(BaseSolver):
         self.model.load_state_dict(chkpt['model_state_dict'])
         self.optimizer.load_state_dict(chkpt['optimizer_state_dict'])
         self.start_epoch = chkpt['epoch']
+        self.best_loss = chkpt['loss']
     
     def solve(self, epochs, batch_size, logdir, checkpoint=None):
         date = datetime.today().strftime('%m_%d')
@@ -146,7 +164,7 @@ class StandardSolver(BaseSolver):
 
         self.model.train()
         start_epoch = self.start_epoch if checkpoint else 0
-        best_loss = 1e8
+        best_loss = self.best_loss if checkpoint else 1e8
         for epoch in range(start_epoch, epochs):
             self.logger.info('============== Epoch %d/%d ==============' % (epoch+1, epochs))
             mean_loss = 0
@@ -160,13 +178,13 @@ class StandardSolver(BaseSolver):
                 loss.backward()
                 self.optimizer.step()
 
-                self.logger.info('step: %d, loss: %.3f' % (step, loss.item()))
+                self.logger.info('step: %d, loss: %.5f' % (step, loss.item()))
                 mean_loss += loss.item()
     
-            self.logger.info('epoch : %d, average loss : %.3f' % (epoch+1, mean_loss/len(self.dataloader)))
+            self.logger.info('epoch : %d, average loss : %.5f' % (epoch+1, mean_loss/len(self.dataloader)))
 
             if self.scheduler:
-                self.scheduler.step()
+                self.scheduler.step(mean_loss)
     
             if mean_loss < best_loss:
                 best_loss = mean_loss
@@ -175,6 +193,7 @@ class StandardSolver(BaseSolver):
                 self.save_checkpoint(save_path,
                                      self.model.state_dict(),
                                      self.optimizer.state_dict(),
+                                     self.conf,
                                      epoch,
                                      loss)
                 self.logger.info('Checkpoint saved to %s' % save_path)
