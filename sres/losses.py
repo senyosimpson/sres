@@ -16,15 +16,9 @@ class AdversarialLoss(nn.Module):
 
 
 class PerceptualLoss(nn.Module):
-    def __init__(self, content_loss_type='vgg'):
-        """
-        args:
-            content_loss (str): which content loss to use, options are {vgg, mse}
-        """
+    def __init__(self):
         super().__init__()
-        self.content_losses = {'vgg': VGGLoss, 'mse': MSELoss}
-        self.content_loss = self.content_losses[content_loss_type]()
-        self.adversarial_loss = AdversarialLoss()
+        self.content_loss = self.VGGLoss()
         self.bce = BCELoss()
         self.mse = MSELoss()
         self.alpha = 1e-2
