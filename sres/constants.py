@@ -4,11 +4,12 @@ from sres.solvers import *
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau, CyclicLR
 from torch.nn import MSELoss, BCELoss
-from sres.losses import PerceptualLoss, AdversarialLoss
+from sres.losses import PerceptualLoss
 
 
 MODELS = {
     'srresnet': SRResNet,
+    'msrresnet': MSRResNet,
     'srgan': [SRGenerator, SRDiscriminator],
     'esrgan': [ESRGenerator, ESRDiscriminator],
     }
@@ -27,7 +28,6 @@ LOSSES = {
     'mse': MSELoss,
     'bce': BCELoss,
     'perceptual': PerceptualLoss,
-    'adversarial': AdversarialLoss
 }
 
 SCHEDULERS = {
