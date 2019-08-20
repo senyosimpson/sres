@@ -1,6 +1,6 @@
 # A base container for training on Paperspace Gradient
 FROM ubuntu:latest
-ENV PYTHONBUFFERED 1
+ENV PYTHONUNBUFFERED 1
 
 COPY requirements.txt /
 
