@@ -2,34 +2,39 @@ import torch
 import torch.nn as nn
 
 class ResidualBlock(nn.Module):
-    def __init__(self, input_channels, output_channels, shortcut=None):
+    def __init__(self, input_channels, output_channels, use_bn=True, bias=False, shortcut=None):
         super().__init__()
-        self.conv1 = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv2 = nn.Conv2d(output_channels, output_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv2 = nn.Conv2d(output_channels, output_channels, kernel_size=3, stride=1, padding=1, bias=bias)
         self.bn1 = nn.BatchNorm2d(output_channels)
         self.bn2 = nn.BatchNorm2d(output_channels)
         self.prelu = nn.PReLU()
         self.shortcut = shortcut
+        self.use_bn = use_bn
 
     def forward(self, x):
-        input_layer = x
-        x = self.bn1(self.conv1(x))
-        x = self.prelu(x)
-        x = self.bn2(self.conv2(x))
+        identity = x
+        if self.use_bn:
+            x = self.bn1(self.conv1(x))
+            x = self.prelu(x)
+            x = self.bn2(self.conv2(x))
+        else:
+            x = self.prelu(self.conv1(x))
+            x = self.conv2(x)
         if self.shortcut:
-            input_layer = self.shortcut(input_layer)
-        x = torch.add(x, input_layer)
+            identity = self.shortcut(identity)
+        x = torch.add(x, identity)
         return x
 
 
 class RRDB(nn.Module):
     """ Residual-in-Residual Block """
-    def __init__(self, input_channels, output_channels, shortcut=None):
+    def __init__(self, input_channels, output_channels, bias=True, shortcut=None):
         super().__init__()
-        self.conv1 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv4 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv4 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=bias)
         self.leakyrelu = nn.LeakyReLU(0.2)
         self.shortcut = shortcut
 
@@ -69,9 +74,9 @@ class DiscriminatorBlock(nn.Module):
 
 
 class SubPixelConv2d(nn.Module):
-    def __init__(self, input_channels, output_channels, upscale_factor=2):
+    def __init__(self, input_channels, output_channels, bias=False, upscale_factor=2):
         super().__init__()
-        self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, padding=1, bias=bias)
         self.pixel_shuffle = nn.PixelShuffle(upscale_factor)
         self.prelu = nn.PReLU()
 
