@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class ResidualBlock(nn.Module):
     def __init__(self, input_channels, output_channels, use_bn=True, bias=False, shortcut=None):
         super().__init__()
@@ -29,7 +30,7 @@ class ResidualBlock(nn.Module):
 
 class RRDB(nn.Module):
     """ Residual-in-Residual Block """
-    def __init__(self, input_channels, output_channels, bias=True, shortcut=None):
+    def __init__(self, bias=True, shortcut=None):
         super().__init__()
         self.conv1 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=bias)
         self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=bias)
