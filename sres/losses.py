@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.nn import MSELoss, BCELoss
 from torchvision.models import vgg19
 
@@ -24,8 +23,7 @@ class PerceptualLoss(nn.Module):
 class VGGLoss(nn.Module):
     def __init__(self, layer=34):
         super().__init__()
-        use_cuda = not False and torch.cuda.is_available()
-        self.device = torch.device('cuda' if use_cuda else 'cpu')
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.mse = nn.MSELoss()
         vgg = vgg19(pretrained=True)
@@ -43,5 +41,5 @@ class VGGLoss(nn.Module):
         real_hr = (real_hr - self.mean) / self.std
         real_hr_feat_map = self.feature_extractor(real_hr)
 
-        loss = beta *  self.mse(gen_hr_feat_map, real_hr_feat_map)
+        loss = beta * self.mse(gen_hr_feat_map, real_hr_feat_map)
         return loss
