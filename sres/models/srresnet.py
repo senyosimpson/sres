@@ -1,5 +1,5 @@
 import torch
-import torch.nn as nn 
+import torch.nn as nn
 import torch.nn.functional as F
 from .submodules import *
 from functools import partial
@@ -64,7 +64,6 @@ class MSRResNet(nn.Module):
         base = F.interpolate(base, scale_factor=4, mode='bicubic')
         base = torch.clamp(base, min=0., max=1.)
         hres = x + base
-        #hres = (self.tanh(hres) + 1) / 2
         return hres
 
     def _make_layer(self, block, num_blocks):
