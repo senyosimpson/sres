@@ -3,12 +3,19 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose
-from sres.transforms import ToTensor, Normalize, Transpose, \
-    RandomCrop, RandomHorizontalFlip, RandomRotateNinety
+
+from sres.transforms import ToTensor
+from sres.transforms import RandomCrop
+from sres.transforms import RandomHorizontalFlip
+from sres.transforms import RandomRotateNinety
 from sres.utils import Config
-from sres.constants import MODELS, DATASETS, OPTS, LOSSES, SCHEDULERS, SOLVERS
-from torch.nn import MSELoss
-from datetime import datetime
+
+from sres.constants import MODELS
+from sres.constants import DATASETS
+from sres.constants import OPTS
+from sres.constants import LOSSES
+from sres.constants import SCHEDULERS
+from sres.constants import SOLVERS
 
 
 if __name__ == '__main__':
@@ -59,7 +66,6 @@ if __name__ == '__main__':
     else:
         optimizer = opt(model.parameters(), **opt_params)
 
-
     scheduler = None
     if sched_name and sched_params:
         sched = SCHEDULERS[sched_name]
@@ -86,7 +92,7 @@ if __name__ == '__main__':
 
     ds = DATASETS[ds_name]
     dataset = ds(ds_root, transform=tsfm)
-    dataloader =  DataLoader(dataset, **ds_params)
+    dataloader = DataLoader(dataset, **ds_params)
 
     solver = SOLVERS[solver_type]
     if 'gan' in model_name:
