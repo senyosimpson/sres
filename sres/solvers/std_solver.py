@@ -3,6 +3,7 @@ import torch
 from datetime import datetime
 from .base_solver import BaseSolver
 
+
 class StandardSolver(BaseSolver):
     def __init__(self, conf, model, optimizer, loss_fn, dataloader, scheduler=None):
         super().__init__(conf, optimizer, loss_fn, dataloader, scheduler)
@@ -35,7 +36,8 @@ class StandardSolver(BaseSolver):
             mean_loss = 0
             for step, image_pair in enumerate(self.dataloader):
                 lres_img, hres_img = image_pair
-                lres_img.to(self.device); hres_img.to(self.device)
+                lres_img = lres_img.to(self.device)
+                hres_img = hres_img.to(self.device)
 
                 generated_img = self.model(lres_img)
                 self.optimizer.zero_grad()
