@@ -10,11 +10,12 @@ class SRResNet(nn.Module):
         super().__init__()
         self.name = 'SRResNet'
         
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=9, stride=1, padding=4, bias=False)
-        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv3 = nn.Conv2d(64, 3, kernel_size=9, stride=1, padding=4, bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=9, stride=1, padding=4, bias=True)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=True)
+        self.conv3 = nn.Conv2d(64, 3, kernel_size=9, stride=1, padding=4, bias=True)
 
-        self.residual = self._make_layer(ResidualBlock, 16)
+        res_block = partial(ResidualBlock, use_bn=True, bias=True, shortcut=None)
+        self.residual = self._make_layer(res_block, 16)
         self.sub_pixel_conv1 = SubPixelConv2d(64, 256)
         self.sub_pixel_conv2 = SubPixelConv2d(64, 256)
 
@@ -25,6 +26,7 @@ class SRResNet(nn.Module):
         base = self.prelu(self.conv1(x))
         x = self.residual(base)
         x = self.bn(self.conv2(x))
+        #x = self.conv2(x)
         x = torch.add(x, base)
         x = self.sub_pixel_conv1(x)
         x = self.sub_pixel_conv2(x)
