@@ -18,7 +18,12 @@ MODELS = {
 DATASETS = {
     'div2k': Div2K,
     'df2k': DF2K,
-    'set5': Set5
+    'set5': Set5,
+    'set14': Set14,
+    'bsd100': BSD100,
+    'urban100': Urban100,
+    'pirm_val': PIRMVal,
+    'div2k_val': Div2KVal
 }
 
 OPTS = {

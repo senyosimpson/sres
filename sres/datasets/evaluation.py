@@ -48,11 +48,18 @@ class Set14(Dataset):
         lres_img_path, hres_img_path = self.dataset[idx]
         lres_img = Image.open(lres_img_path)
         hres_img = Image.open(hres_img_path)
+        # third image is grayscale, convert to RGB
+        if idx == 2:
+            lres_img = lres_img.convert('RGB')
+            hres_img = hres_img.convert('RGB')
         sample = (lres_img, hres_img)
 
         if self.transform:
             sample = self.transform(sample)
         return sample
+
+    def __len__(self):
+        return len(self.dataset)
 
 
 class BSD100(Dataset):
@@ -78,6 +85,9 @@ class BSD100(Dataset):
             sample = self.transform(sample)
         return sample
 
+    def __len__(self):
+        return len(self.dataset)
+
 
 class Urban100(Dataset):
     def __init__(self, root, fmat='png', transform=None):
@@ -102,8 +112,11 @@ class Urban100(Dataset):
             sample = self.transform(sample)
         return sample
 
+    def __len__(self):
+        return len(self.dataset)
 
-class PIRM(Dataset):
+
+class PIRMVal(Dataset):
     def __init__(self, root, fmat='png', transform=None):
         ext = '*.%s' % fmat
         self.lr_root = os.path.join(root, '4x_downsampled', ext)
@@ -127,8 +140,11 @@ class PIRM(Dataset):
             sample = self.transform(sample)
         return sample
 
+    def __len__(self):
+        return len(self.dataset)
 
-class Div2K(Dataset):
+
+class Div2KVal(Dataset):
     def __init__(self, root, fmat='png', transform=None):
         ext = '*.%s' % fmat
         self.lr_root = os.path.join(root, 'DIV2K_valid_LR_bicubic_X4', ext)
@@ -151,3 +167,6 @@ class Div2K(Dataset):
         if self.transform:
             sample = self.transform(sample)
         return sample
+
+    def __len__(self):
+        return len(self.dataset)
