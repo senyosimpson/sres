@@ -1,0 +1,25 @@
+{
+    "logdir": "/artifacts",
+    "model": "srgan",
+    "solver": "gan",
+    "epochs": 500,
+    "loss_fn": ["perceptual", "bce"],
+    "patch_size": 128,
+    "dataset": {
+        "root": "/storage/DF2K/train",
+        "name": "df2k",
+        "params": {
+            "batch_size": 16,
+            "num_workers": 4,
+            "shuffle": true
+        }
+    },
+    "optimizer": {
+        "name": "adam",
+        "params": {
+            "lr" : 1e-4,
+            "betas": [0.9, 0.999]
+        }
+    },
+    "generator_path": "./sres/models/trained/MSRResNet-VGG.pt"
+}
