@@ -1,10 +1,10 @@
 import os
 from PIL import Image
-import torch
 from torch.utils.data import Dataset
 from glob import glob
 
 DIR_NAMES = {'lr_dirname':'LR', 'hr_dirname':'HR'}
+
 
 class DF2K(Dataset):
     def __init__(self, root, fmat='png', transform=None):
