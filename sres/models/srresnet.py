@@ -6,15 +6,15 @@ from functools import partial
 
 
 class SRResNet(nn.Module):
-    def __init__(self):
+    def __init__(self, use_bn=True):
         super().__init__()
         self.name = 'SRResNet'
-        
+        self.use_bn = use_bn
         self.conv1 = nn.Conv2d(3, 64, kernel_size=9, stride=1, padding=4, bias=True)
         self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=True)
         self.conv3 = nn.Conv2d(64, 3, kernel_size=9, stride=1, padding=4, bias=True)
 
-        res_block = partial(ResidualBlock, use_bn=True, bias=True, shortcut=None)
+        res_block = partial(ResidualBlock, use_bn=False, bias=True, shortcut=None)
         self.residual = self._make_layer(res_block, 16)
         self.sub_pixel_conv1 = SubPixelConv2d(64, 256)
         self.sub_pixel_conv2 = SubPixelConv2d(64, 256)
@@ -25,8 +25,10 @@ class SRResNet(nn.Module):
     def forward(self, x):
         base = self.prelu(self.conv1(x))
         x = self.residual(base)
-        x = self.bn(self.conv2(x))
-        #x = self.conv2(x)
+        if self.use_bn:
+            x = self.bn(self.conv2(x))
+        else:
+            x = self.conv2(x)
         x = torch.add(x, base)
         x = self.sub_pixel_conv1(x)
         x = self.sub_pixel_conv2(x)
@@ -66,6 +68,7 @@ class MSRResNet(nn.Module):
         base = F.interpolate(base, scale_factor=4, mode='bicubic')
         base = torch.clamp(base, min=0., max=1.)
         hres = x + base
+        #hres = (self.tanh(hres) + 1) / 2
         return hres
 
     def _make_layer(self, block, num_blocks):
