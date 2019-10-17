@@ -4,12 +4,11 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose
 
+from sres.utils import Config
 from sres.transforms import ToTensor
 from sres.transforms import RandomCrop
 from sres.transforms import RandomHorizontalFlip
 from sres.transforms import RandomRotateNinety
-from sres.utils import Config
-
 from sres.constants import MODELS
 from sres.constants import DATASETS
 from sres.constants import OPTS
@@ -51,37 +50,37 @@ if __name__ == '__main__':
     shutil.copy(args.config, logdir)
 
     model = MODELS[model_name]
-    if isinstance(model, list):
-        generator, discriminator = MODELS[model_name]
+    opt = OPTS[opt_name]
+    if solver_type == 'gan':
+        # model
+        generator, discriminator = model
         generator = generator().to(device)
         discriminator = discriminator(input_shape=patch_size).to(device)
-    else:
-        model = model().to(device)
-
-    opt = OPTS[opt_name]
-    if 'gan' in model_name:
+        # optimizer
         gen_optimizer = opt(generator.parameters(), **opt_params)
         discrim_optimizer = opt(discriminator.parameters(), **opt_params)
         optimizer = [gen_optimizer, discrim_optimizer]
+        # loss function
+        gen_loss_name, discrim_loss_name = loss_fn
+        gen_loss = LOSSES[gen_loss_name]
+        gen_loss = gen_loss()
+        discrim_loss = LOSSES[discrim_loss_name]
+        discrim_loss = discrim_loss()
+        loss_fn = [gen_loss, discrim_loss]
     else:
+        # model
+        model = model().to(device)
+        # optimizer
         optimizer = opt(model.parameters(), **opt_params)
+        # loss function
+        loss_fn = LOSSES[loss_fn]
+        loss_fn = loss_fn()
+
 
     scheduler = None
     if sched_name and sched_params:
         sched = SCHEDULERS[sched_name]
         scheduler = sched(optimizer, **sched_params)
-    
-    if isinstance(loss_fn, list):
-        gen_loss_name, discrim_loss_name = loss_fn
-        gen_loss = LOSSES[gen_loss_name]
-        discrim_loss = LOSSES[discrim_loss_name]
-
-        gen_loss = gen_loss()
-        discrim_loss = discrim_loss()
-        loss_fn = [gen_loss, discrim_loss]
-    else:
-        loss_fn = LOSSES[loss_fn]
-        loss_fn = loss_fn()
 
     tsfm = Compose([
         RandomCrop(patch_size),
@@ -89,13 +88,12 @@ if __name__ == '__main__':
         RandomRotateNinety(),
         ToTensor()
     ])
-
     ds = DATASETS[ds_name]
     dataset = ds(ds_root, transform=tsfm)
     dataloader = DataLoader(dataset, **ds_params)
 
     solver = SOLVERS[solver_type]
-    if 'gan' in model_name:
+    if solver_type == 'gan':
         solver = solver(conf, generator, discriminator, optimizer, loss_fn, dataloader, generator_path, scheduler)
     else:
         solver = solver(conf, model, optimizer, loss_fn, dataloader, scheduler)
