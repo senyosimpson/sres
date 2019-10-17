@@ -1,6 +1,13 @@
 # Super Resolution
 
-Undergraduate thesis on super resolution
+Single image super-resolution using SRResNet and SRGAN from the paper [Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network]().
+Additionally, a modified version of SRResNet (MSRResNet) is implemented here. This version uses residual learning and no batch normalization layers to improve
+performance and convergence speed.
+
+The GAN model was not successfully reproduced - this is no surprise as these models are notoriously difficult to train. Colour artifacts are present in the
+outputs of the model. The results of MSRResNet and SRGAN are shown below
+
+![Results](./artifacts/full-result2.jpg)
 
 ## Training a model
 
@@ -47,14 +54,16 @@ solver - std, gan
 dataset - div2k, df2k
 optimizer - adam
 loss_fn - mse, perceptual, adversarial
-scheduler - reduce, cyclic
+scheduler (optional) - reduce, cyclic
 ```
 
 To Note:
  * checkpoint and scheduler are optional.
- * loss_fn may be a list if multiple loss functions are used
+ * loss_fn may be a list if multiple loss functions are used - look at GAN config file
+ * a generator_path can be specified to initialise the generator of the GAN - look at GAN config file
 
-In order to train a model, a solver must be defined for it. A solver is a class that contains the logic for training the model and takes in various arguments in order to do so. These are defined in the `solvers` directory. Every solver should inherit the base solver which sets defaults for every model. The current implementation is shown below 
+In order to train a model, a solver must be defined for it. A solver is a class that contains the logic for training the model and takes in various arguments in order to do so. 
+These are defined in the `solvers` directory. Every solver should inherit the base solver which sets defaults for every model. The current implementation is shown below 
 
 ```python
 class BaseSolver(ABC):
