@@ -11,8 +11,7 @@ from sres.losses import PerceptualLoss, VGGLoss
 MODELS = {
     'srresnet': SRResNet,
     'msrresnet': MSRResNet,
-    'srgan': [SRGenerator, SRDiscriminator],
-    'esrgan': [ESRGenerator, ESRDiscriminator],
+    'srgan': [Generator, Discriminator],
     }
 
 DATASETS = {
